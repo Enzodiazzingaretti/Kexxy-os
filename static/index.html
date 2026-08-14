@@ -208,6 +208,9 @@
     } catch(e){}
   })();
   </script>
+  <!-- KEXXY OS — capa de marca propia. Ver static/kexxy/. Borrar esta línea
+       y el <link> de brand.css revierte al branding original de upstream. -->
+  <script src="/static/kexxy/brand.js"></script>
   <script defer src="/static/lib/highlight.min.js"></script>
   <!-- Inter font — self-hosted, no Google dependencies -->
   <style>
@@ -258,6 +261,8 @@
   <link rel="preload" as="font" type="font/woff2" crossorigin href="/static/fonts/FiraCode-Regular.woff2">
   <link rel="preload" as="font" type="font/woff2" crossorigin href="/static/fonts/FiraCode-SemiBold.woff2">
   <link rel="stylesheet" href="/static/style.css?v=20260808startupshell1">
+  <!-- KEXXY OS — va DESPUÉS de style.css a propósito: es capa de override. -->
+  <link rel="stylesheet" href="/static/kexxy/brand.css">
   <link rel="modulepreload" href="/static/app.js?v=20260808startupshell1">
   <link rel="modulepreload" href="/static/js/chat.js?v=20260801fix1">
   <link rel="modulepreload" href="/static/js/ui.js">

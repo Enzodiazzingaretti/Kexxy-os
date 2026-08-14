@@ -1,0 +1,176 @@
+/* ============================================================
+   KEXXY OS — remates visuales
+   ------------------------------------------------------------
+   Archivo propio, invisible para `git pull`.
+
+   Se carga DESPUÉS de style.css a propósito: es capa de override.
+   Si lo movés antes, upstream le gana a todo lo de acá.
+
+   A propósito es corto: el grueso de la estética (paleta, Fira
+   Code en toda la UI, densidad compacta) sale del tema sembrado
+   en brand.js y se edita desde Ajustes → Apariencia, no desde
+   acá. Esto cubre sólo lo que el sistema de temas no expone.
+   ============================================================ */
+
+/* ── El emblema ─────────────────────────────────────────────
+   Se pinta con mask-image en lugar de usar el PNG teñido: así
+   toma --brand-color y sigue al tema, igual que hacía el SVG
+   original del barquito con currentColor. Cambiar el acento en
+   Ajustes recolorea el logo solo.
+   ──────────────────────────────────────────────────────────── */
+.kexxy-mark {
+  display: inline-block;
+  flex-shrink: 0;
+  background-color: var(--brand-color, var(--red, #ffb000));
+  -webkit-mask-image: url('/static/kexxy/logo-mask.png');
+          mask-image: url('/static/kexxy/logo-mask.png');
+  -webkit-mask-repeat: no-repeat;
+          mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+          mask-position: center;
+  -webkit-mask-size: contain;
+          mask-size: contain;
+}
+
+/* Sidebar: no traía logo, sólo el texto.
+
+   El emblema es denso: por debajo de ~18px deja de leerse como sigilo
+   y pasa a ser un asterisco. Este es el piso donde todavía se
+   distingue la silueta. */
+.kexxy-mark-sidebar {
+  width: 1.5rem;
+  height: 1.5rem;
+  margin-right: 0.45rem;
+}
+
+/* Pantalla de carga. El emblema respira despacio, al ritmo de la onda
+   ASCII que ya estaba abajo — no compite con ella. */
+#app-loader .kexxy-mark-loader {
+  width: 96px;
+  height: 96px;
+  animation: kexxy-breathe 2.4s ease-in-out infinite;
+}
+
+@keyframes kexxy-breathe {
+  0%, 100% { opacity: 0.32; }
+  50%      { opacity: 0.85; }
+}
+
+/* Respeta a quien pide menos movimiento: queda quieto, no invisible. */
+@media (prefers-reduced-motion: reduce) {
+  #app-loader .kexxy-mark-loader { animation: none; opacity: 0.7; }
+}
+
+/* ── Capa sigil ─────────────────────────────────────────────
+   Ornamentos derivados del propio emblema, no dibujados aparte:
+   ornament-h.png es la banda de brazos laterales del logo,
+   recortada. Todo se pinta por mask sobre --brand-color, así
+   sigue al tema como el resto.
+   ──────────────────────────────────────────────────────────── */
+
+/* Sigilo de fondo en la bienvenida.
+
+   Anclado a .chat-container y NO al wordmark. Esa es toda la diferencia:
+   el wordmark se mueve según cuánto texto haya debajo (subtítulo, tip,
+   botón), así que anclarlo ahí obligaba a topes en vh calculados contra
+   el borde superior — y cualquier corrimiento volvía a cortar la punta.
+
+   El área de chat, en cambio, es fija. Centrado en ella, con la máscara
+   en `contain`, el emblema entero entra SIEMPRE, sin importar el tamaño
+   de la ventana. No hace falta ninguna regla por viewport.
+
+   Se limita a .welcome-active, la clase que chatRenderer.js pone y saca:
+   el sigilo se ve en la bienvenida y desaparece al abrir un chat. */
+.chat-container.welcome-active::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  /* Pasarse del 100% es a propósito y es seguro: la máscara es un lienzo
+     cuadrado con el arte al 78%, así que el emblema rinde ~84% del alto
+     del área de chat y queda centrado, con ~8% de aire arriba y abajo.
+     Lo que se sale del contenedor es lienzo transparente, no dibujo. */
+  width: 108%;
+  height: 108%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  background-color: var(--brand-color, var(--red, #ffb000));
+  /* Las puntas son finas: por debajo de ~12% no se despegan del fondo y se
+     ve sólo el núcleo denso, que es lo que lo hacía parecer un manchón. */
+  opacity: 0.15;
+  -webkit-mask: url('/static/kexxy/logo-mask.png') center / contain no-repeat;
+          mask: url('/static/kexxy/logo-mask.png') center / contain no-repeat;
+}
+
+/* Separador espinado entre secciones del sidebar.
+
+   Acá el ornamento sí cumple función: separa. En la bienvenida no —
+   ahí el sigilo de fondo es la misma pieza a mayor escala y el divisor
+   le caía justo encima de los brazos, así que no se distinguía.
+
+   `position: absolute` es lo que lo hace seguro: .section-header-flex
+   es un contenedor flex, y un ::after en flujo normal entraría como
+   flex item, metiéndose entre el título y los botones de la fila. */
+.section-header-flex {
+  position: relative;
+}
+
+.section-header-flex::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  /* Medido en la app: el encabezado tiene 8px de padding inferior y el texto
+     termina 8px antes del borde. El ornamento entra exacto en ese hueco: a
+     -3px se montaba un par de píxeles sobre el primer item de la lista. */
+  bottom: 0;
+  width: 48px;
+  height: 8px;
+  transform: translateX(-50%);
+  pointer-events: none;
+  opacity: 0.22;
+  background-color: var(--brand-color, var(--red, #ffb000));
+  -webkit-mask: url('/static/kexxy/ornament-h.png') center / contain no-repeat;
+          mask: url('/static/kexxy/ornament-h.png') center / contain no-repeat;
+}
+
+/* Sangrado de tinta en el emblema: el trazo del logo es filoso y a
+   tamaño grande queda seco sin esto. */
+#app-loader .kexxy-mark-loader {
+  filter: drop-shadow(0 0 10px color-mix(in srgb, var(--brand-color, var(--red, #ffb000)) 40%, transparent));
+}
+
+/* ── Tipografía de la marca ─────────────────────────────────────
+   Bahnschrift Condensed: una DIN industrial, angosta y de trazo
+   rígido. El emblema ya aporta todo lo orgánico; una tipografía
+   caligráfica encima duplicaría esa carga. La rígida contrasta y
+   deja que el sigilo sea el ornamento.
+
+   Es fuente del sistema (Windows 10/11), no se empaqueta nada. Esta
+   instalación se abre siempre desde la PC, así que alcanza — el
+   fallback igual está por si se abre desde otro lado.
+   ──────────────────────────────────────────────────────────────── */
+.sidebar-brand-title,
+#welcome-screen .welcome-name,
+.welcome-name {
+  font-family: 'Bahnschrift Condensed', 'Bahnschrift SemiCondensed',
+               'Bahnschrift', 'Arial Narrow', var(--font-family, sans-serif);
+  font-stretch: 75%;
+  text-transform: uppercase;
+}
+
+/* Wordmark del sidebar: etiqueta de sistema, no nombre de producto. */
+.sidebar-brand-title {
+  letter-spacing: 0.2em;
+  font-weight: 600;
+  font-size: 0.86em;
+}
+
+/* El wordmark grande aguanta mucho más tracking: es lo que lo separa
+   de un título cualquiera y lo hace leer como marca. */
+#welcome-screen .welcome-name {
+  letter-spacing: 0.26em;
+  font-weight: 600;
+  /* Compensa la sangría que deja el tracking en la última letra, para
+     que el bloque quede ópticamente centrado sobre el sigilo. */
+  text-indent: 0.26em;
+}

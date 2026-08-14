@@ -1,0 +1,8 @@
+# El .gitignore de upstream excluye *.png en todo el repo. Acá adentro los PNG
+# NO son basura: son la marca (los logos fuente) y los assets que brand.css
+# necesita en runtime. Sin ellos, un clon del repo se ve sin logo.
+#
+# Se re-incluyen desde acá, en la carpeta propia, para no tocar el .gitignore
+# de upstream y no sumar superficie de conflicto en cada pull.
+!*.png
+!*.ico

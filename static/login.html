@@ -3,8 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, interactive-widget=resizes-visual">
-<title>Odysseus — Login</title>
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 4L16 22L6 22Z' fill='%23e06c75'/%3E%3Cpath d='M16 8L16 22L24 22Z' fill='%23e06c75' opacity='0.6'/%3E%3Cpath d='M4 24Q10 20 16 24Q22 28 28 24' stroke='%23e06c75' stroke-width='2.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
+<title>KEXXY OS — Login</title>
+<link rel="icon" type="image/png" sizes="16x16" href="/static/kexxy/favicon-16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/static/kexxy/favicon-32.png">
 <link rel="manifest" href="/static/manifest.json">
 <link rel="apple-touch-icon" href="/static/icons/icon-192.png">
 <script nonce="{{CSP_NONCE}}">
@@ -134,9 +135,11 @@
     text-align: center; margin-bottom: 1.5rem;
   }
   .logo span {
-    font-family: 'Fira Code', monospace;
+    /* KEXXY OS: misma tipografía de marca que la app (ver static/kexxy/brand.css). */
+    font-family: 'Bahnschrift Condensed', 'Bahnschrift SemiCondensed', 'Bahnschrift', 'Arial Narrow', 'Fira Code', monospace;
+    font-stretch: 75%;
     font-size: 2rem; font-weight: 600;
-    letter-spacing: 0.04em;
+    letter-spacing: 0.22em;
     /* Same gradient as the main app's welcome-screen "Odysseus" title
        (static/style.css #welcome-screen .welcome-name) so the brand
        wordmark is consistent across login + first-launch screens. */
@@ -228,7 +231,17 @@
   .remember-toggle:hover .remember-dot {
     border-color: color-mix(in srgb, var(--fg) 40%, transparent);
   }
-  .logo-boat { width: 1.6rem; height: 1.6rem; margin-right: 0.4rem; vertical-align: -0.15em; color: var(--red); }
+  /* KEXXY OS: el emblema se pinta por mask para tomar el acento del tema,
+     igual que en la app. El login no carga static/kexxy/brand.css.
+     Va como `.logo span.logo-boat` y no como `.logo-boat` a propósito: la
+     regla `.logo span` de acá abajo pinta un gradiente con
+     background-clip:text para el wordmark, le gana por especificidad al
+     selector de una sola clase y dejaría el emblema invisible. */
+  .logo span.logo-boat { width: 2rem; height: 2rem; margin-right: 0.3rem; vertical-align: -0.28em;
+    display: inline-block; background: var(--brand-color, var(--red));
+    -webkit-background-clip: border-box; background-clip: border-box;
+    -webkit-mask: url('/static/kexxy/logo-mask.png') center / contain no-repeat;
+            mask: url('/static/kexxy/logo-mask.png') center / contain no-repeat; }
   .version-label {
     position: fixed; bottom: 12px; right: 16px;
     font-size: 0.7rem; opacity: 0.25;
@@ -253,7 +266,7 @@
 <body>
 <main class="card">
   <h1 class="logo">
-    <svg class="logo-boat" viewBox="0 0 32 32" aria-hidden="true" focusable="false"><path d="M16 4L16 22L6 22Z" fill="currentColor"/><path d="M16 8L16 22L24 22Z" fill="currentColor" opacity="0.6"/><path d="M4 24Q10 20 16 24Q22 28 28 24" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round"/></svg><span>Odysseus</span>
+    <span class="logo-boat" aria-hidden="true"></span><span>KEXXY OS</span>
   </h1>
   <p class="setup-note" id="setupNote" style="display:none"></p>
 
