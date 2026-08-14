@@ -90,7 +90,13 @@ repair_bind_mount_ownership() {
         return
     fi
 
-    repair_tree_ownership "$dir"
+    # For bind-mounted directories that may contain thousands of files or
+    # be on slow/unreliable mount points (Windows WSL2, network mounts, etc.),
+    # skip recursive traversal entirely. This prevents the entrypoint from
+    # hanging indefinitely during startup. Deep chown is not critical —
+    # permission issues are rare in practice once the root is fixed.
+    echo "Shallow ownership repair for $dir (skip recursion for startup speed)" >&2
+    chown "$PUID:$PGID" "$dir" 2>/dev/null || true
 }
 
 # Repair image-owned writable paths without walking into bind-mounted host
