@@ -1,0 +1,18 @@
+# Overlay propio de KEXXY OS.
+#
+# Archivo nuevo: no existe en odysseus-dev/odysseus, así que `git pull` nunca
+# lo toca. Mismo patrón que docker/gpu.nvidia.yml, y por eso se engancha por
+# COMPOSE_FILE en vez de editar docker-compose.yml.
+#
+# Monta el cache del panel de proyectos y finanzas en SÓLO LECTURA (`:ro`),
+# para que el servidor MCP `kexxy_panel` pueda leerlo. El `:ro` no es
+# decorativo: es la garantía de que la IA no puede escribir sobre el estado
+# del panel aunque quisiera.
+#
+# KEXXY_PANEL_DIR permite mover el repo `panel` sin editar este archivo.
+services:
+  odysseus:
+    volumes:
+      - ${KEXXY_PANEL_DIR:-../panel}:/app/kexxy-panel:ro
+    environment:
+      - KEXXY_PANEL_CACHE=/app/kexxy-panel/cache.json

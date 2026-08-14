@@ -271,6 +271,40 @@
     brand.insertBefore(mark('kexxy-mark-sidebar'), title || brand.firstChild);
   }
 
+  /* Acceso al panel de proyectos y finanzas.
+
+     Abre en pestaña nueva en vez de embeberlo en un iframe: la CSP de la app
+     declara `frame-src 'self'`, así que embeberlo obligaría a parchear el
+     middleware de upstream. El navegador corre en Windows, así que llega a
+     127.0.0.1 sin intermediarios.
+
+     No se puede chequear antes si el panel está levantado: `connect-src
+     'self'` bloquea el fetch. Por eso el tooltip avisa qué hacer si no abre. */
+  var PANEL_URL = 'http://127.0.0.1:4321';
+
+  function addPanelLink() {
+    if (document.getElementById('kexxy-panel-btn')) return;
+    var theme = document.getElementById('tool-theme-btn');
+    if (!theme || !theme.parentNode) return;
+
+    var item = document.createElement('div');
+    item.className = 'list-item';
+    item.id = 'kexxy-panel-btn';
+    item.title = 'Panel de proyectos y finanzas. Si no abre, levantalo con Panel.bat';
+    item.innerHTML =
+      '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"' +
+      ' stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"' +
+      ' style="flex-shrink:0;opacity:0.5;">' +
+      '<rect x="3" y="3" width="18" height="18" rx="2"/>' +
+      '<path d="M3 9h18"/><path d="M9 21V9"/>' +
+      '</svg><span class="grow">Panel</span>';
+    item.addEventListener('click', function () {
+      window.open(PANEL_URL, '_blank', 'noopener');
+    });
+
+    theme.parentNode.insertBefore(item, theme);
+  }
+
   // Cabecera del chat. El default estático de index.html es "Odysseus Chat";
   // se toca SÓLO si dice exactamente eso, para no reescribir el nombre de una
   // sesión que vos hayas puesto.
@@ -302,6 +336,7 @@
     }
     swapBoat();
     markSidebar();
+    addPanelLink();
     fixChatMeta();
     fixPlaceholder();
     fixTitle();

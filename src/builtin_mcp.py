@@ -74,6 +74,8 @@ _BUILTIN_SERVERS = {
     "memory":     ("mcp_servers/memory_server.py",     "Built-in: Memory"),
     "rag":        ("mcp_servers/rag_server.py",        "Built-in: RAG"),
     "email":      ("mcp_servers/email_server.py",      "Built-in: Email"),
+    # KEXXY OS: acceso de sólo lectura al panel de proyectos y finanzas.
+    "kexxy_panel": ("kexxy/panel_mcp.py",              "KEXXY: Panel"),
 }
 
 # NPX-based built-in servers (run via npx, not Python)
