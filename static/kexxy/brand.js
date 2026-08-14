@@ -271,16 +271,16 @@
     brand.insertBefore(mark('kexxy-mark-sidebar'), title || brand.firstChild);
   }
 
-  /* Acceso al panel de proyectos y finanzas.
+  /* ── Panel de proyectos y finanzas ──────────────────────────
+     No se embebe el panel en un iframe: la CSP declara `frame-src 'self'`,
+     así que habría que parchear el middleware de upstream, y además el
+     iframe dependería de que el servidor del panel esté levantado.
 
-     Abre en pestaña nueva en vez de embeberlo en un iframe: la CSP de la app
-     declara `frame-src 'self'`, así que embeberlo obligaría a parchear el
-     middleware de upstream. El navegador corre en Windows, así que llega a
-     127.0.0.1 sin intermediarios.
-
-     No se puede chequear antes si el panel está levantado: `connect-src
-     'self'` bloquea el fetch. Por eso el tooltip avisa qué hacer si no abre. */
-  var PANEL_URL = 'http://127.0.0.1:4321';
+     En vez de eso se renderizan sus datos acá, leyendo el mismo cache.json
+     montado en :ro que usa el servidor MCP. Consecuencias: se ve con el tema
+     de KEXXY OS, funciona con el panel apagado, y la interfaz y el modelo
+     miran exactamente la misma fuente — no hay dos verdades que diverjan.
+     ──────────────────────────────────────────────────────────── */
 
   function addPanelLink() {
     if (document.getElementById('kexxy-panel-btn')) return;
@@ -290,7 +290,7 @@
     var item = document.createElement('div');
     item.className = 'list-item';
     item.id = 'kexxy-panel-btn';
-    item.title = 'Panel de proyectos y finanzas. Si no abre, levantalo con Panel.bat';
+    item.title = 'Proyectos, git y cobros';
     item.innerHTML =
       '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"' +
       ' stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"' +
@@ -298,11 +298,121 @@
       '<rect x="3" y="3" width="18" height="18" rx="2"/>' +
       '<path d="M3 9h18"/><path d="M9 21V9"/>' +
       '</svg><span class="grow">Panel</span>';
-    item.addEventListener('click', function () {
-      window.open(PANEL_URL, '_blank', 'noopener');
-    });
-
+    item.addEventListener('click', openPanel);
     theme.parentNode.insertBefore(item, theme);
+  }
+
+  function esc(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  function antiguedad(generado) {
+    if (!generado) return 'antigüedad desconocida';
+    var t = new Date(generado);
+    if (isNaN(t)) return String(generado);
+    var horas = (Date.now() - t.getTime()) / 36e5;
+    if (horas < 1) return 'hace ' + Math.round(horas * 60) + ' min';
+    if (horas < 48) return 'hace ' + Math.round(horas) + ' h';
+    return 'hace ' + Math.round(horas / 24) + ' días';
+  }
+
+  function seccion(titulo, cuerpo) {
+    return '<div class="kx-sec"><h3>' + esc(titulo) + '</h3>' + cuerpo + '</div>';
+  }
+
+  function render(d) {
+    var proyectos = d.proyectos || [];
+    var alertas = d.alertas || [];
+    var fin = d.finanzas || {};
+    var maquina = d.maquina || {};
+    var html = '';
+
+    // Encabezado: de qué máquina son los datos y de cuándo.
+    html += '<div class="kx-meta">' +
+      esc(maquina.etiqueta || maquina.hostname || 'máquina') +
+      ' · datos ' + esc(antiguedad(d.generado)) + '</div>';
+
+    // Finanzas primero: es lo que tiene consecuencias con fecha.
+    if (fin && (fin.vencidos || fin.pendientes || fin.proximos)) {
+      var cifras = '<div class="kx-cifras">' +
+        '<div class="kx-cifra kx-alto"><span>Vencido</span><b>' + esc(fin.totalVencido || 0) + '</b></div>' +
+        '<div class="kx-cifra"><span>Pendiente</span><b>' + esc(fin.totalPendiente || 0) + '</b></div>' +
+        '<div class="kx-cifra"><span>Próximo</span><b>' + esc(fin.totalProximos || 0) + '</b></div>' +
+        '</div>';
+      var venc = (fin.vencidos || []).map(function (i) {
+        return '<li class="kx-alto">' + esc(i.concepto || i) + '</li>';
+      }).join('');
+      if (venc) cifras += '<ul class="kx-lista">' + venc + '</ul>';
+      html += seccion('Cobros', cifras);
+    }
+
+    // Alertas, de mayor a menor severidad.
+    if (alertas.length) {
+      var orden = { alta: 0, media: 1, baja: 2 };
+      var ord = alertas.slice().sort(function (a, b) {
+        return (orden[a.severidad] ?? 3) - (orden[b.severidad] ?? 3);
+      });
+      html += seccion('Alertas (' + alertas.length + ')',
+        '<ul class="kx-lista">' + ord.map(function (a) {
+          return '<li class="kx-' + esc(a.severidad || 'baja') + '">' + esc(a.texto || '') + '</li>';
+        }).join('') + '</ul>');
+    }
+
+    // Proyectos: sólo lo que no está limpio aporta información.
+    if (proyectos.length) {
+      html += seccion('Proyectos (' + proyectos.length + ')',
+        '<ul class="kx-lista kx-proy">' + proyectos.map(function (p) {
+          var g = p.git || {};
+          var estado = [];
+          if (!g.esRepo) estado.push('no es repo');
+          if (g.sucios) estado.push(g.sucios + ' sin commitear');
+          if (g.adelante) estado.push(g.adelante + ' sin subir');
+          if (g.atras) estado.push(g.atras + ' sin traer');
+          return '<li><b>' + esc(p.nombre) + '</b>' +
+            (g.rama ? ' <span class="kx-rama">' + esc(g.rama) + '</span>' : '') +
+            (estado.length ? ' <span class="kx-estado">' + esc(estado.join(' · ')) + '</span>'
+                           : ' <span class="kx-ok">limpio</span>') + '</li>';
+        }).join('') + '</ul>');
+    }
+    return html;
+  }
+
+  function openPanel() {
+    var prev = document.getElementById('kx-panel-modal');
+    if (prev) prev.remove();
+
+    var modal = document.createElement('div');
+    modal.id = 'kx-panel-modal';
+    modal.innerHTML =
+      '<div class="kx-caja" role="dialog" aria-label="Panel de proyectos y finanzas">' +
+      '<div class="kx-head"><span class="kexxy-mark kx-head-mark"></span>' +
+      '<h2>Panel</h2><button class="kx-cerrar" aria-label="Cerrar">&times;</button></div>' +
+      '<div class="kx-body">Cargando…</div></div>';
+    document.body.appendChild(modal);
+
+    function cerrar() {
+      modal.remove();
+      document.removeEventListener('keydown', onEsc);
+    }
+    function onEsc(e) { if (e.key === 'Escape') cerrar(); }
+    document.addEventListener('keydown', onEsc);
+    modal.querySelector('.kx-cerrar').addEventListener('click', cerrar);
+    modal.addEventListener('click', function (e) { if (e.target === modal) cerrar(); });
+
+    var body = modal.querySelector('.kx-body');
+    fetch('/api/kexxy/panel', { credentials: 'same-origin' })
+      .then(function (r) {
+        if (r.status === 503) {
+          return r.json().then(function (j) { throw new Error(j.detail || 'Panel sin datos'); });
+        }
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+      })
+      .then(function (d) { body.innerHTML = render(d); })
+      .catch(function (e) {
+        body.innerHTML = '<div class="kx-error">' + esc(e.message) + '</div>';
+      });
   }
 
   // Cabecera del chat. El default estático de index.html es "Odysseus Chat";

@@ -684,6 +684,10 @@ app.include_router(memory_router)
 from routes.skills_routes import setup_skills_routes
 app.include_router(setup_skills_routes(skills_manager))
 
+# KEXXY OS: panel de proyectos y finanzas (ver kexxy/panel_routes.py)
+from kexxy.panel_routes import router as kexxy_panel_router
+app.include_router(kexxy_panel_router)
+
 # Chat
 from routes.chat_routes import setup_chat_routes
 app.include_router(setup_chat_routes(

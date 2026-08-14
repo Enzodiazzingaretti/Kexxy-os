@@ -139,6 +139,132 @@
   filter: drop-shadow(0 0 10px color-mix(in srgb, var(--brand-color, var(--red, #ffb000)) 40%, transparent));
 }
 
+/* ── Panel de proyectos y finanzas ──────────────────────────────
+   Vista propia, con los tokens del tema, para que no se note que los
+   datos vienen de otro proyecto. Todas las clases van con prefijo kx-
+   para no colisionar nunca con las de upstream.
+   ──────────────────────────────────────────────────────────────── */
+#kx-panel-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  background: color-mix(in srgb, #000 62%, transparent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+#kx-panel-modal .kx-caja {
+  background: var(--panel, #111);
+  border: 1px solid var(--border, #333);
+  border-radius: 6px;
+  width: min(760px, 100%);
+  max-height: 86vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+#kx-panel-modal .kx-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border, #333);
+  flex-shrink: 0;
+}
+
+#kx-panel-modal .kx-head-mark { width: 18px; height: 18px; }
+
+#kx-panel-modal .kx-head h2 {
+  flex: 1;
+  margin: 0;
+  font-size: 0.92rem;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  font-weight: 600;
+  color: var(--brand-color, var(--red, #ffb000));
+}
+
+#kx-panel-modal .kx-cerrar {
+  background: none;
+  border: none;
+  color: var(--fg, #ddd);
+  opacity: 0.5;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 4px;
+}
+#kx-panel-modal .kx-cerrar:hover { opacity: 1; }
+
+#kx-panel-modal .kx-body {
+  overflow-y: auto;
+  padding: 14px 16px 18px;
+  font-size: 0.8rem;
+  color: var(--fg, #ddd);
+}
+
+#kx-panel-modal .kx-meta {
+  opacity: 0.45;
+  font-size: 0.7rem;
+  margin-bottom: 14px;
+}
+
+#kx-panel-modal .kx-sec { margin-bottom: 18px; }
+#kx-panel-modal .kx-sec h3 {
+  margin: 0 0 8px;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  opacity: 0.55;
+  font-weight: 600;
+}
+
+/* Las cifras de plata se leen de un vistazo o no sirven. */
+#kx-panel-modal .kx-cifras { display: flex; gap: 10px; margin-bottom: 10px; }
+#kx-panel-modal .kx-cifra {
+  flex: 1;
+  border: 1px solid var(--border, #333);
+  border-radius: 4px;
+  padding: 8px 10px;
+}
+#kx-panel-modal .kx-cifra span { display: block; opacity: 0.5; font-size: 0.65rem; }
+#kx-panel-modal .kx-cifra b { font-size: 0.95rem; font-weight: 600; }
+#kx-panel-modal .kx-cifra.kx-alto { border-color: var(--brand-color, #ffb000); }
+#kx-panel-modal .kx-cifra.kx-alto b { color: var(--brand-color, #ffb000); }
+
+#kx-panel-modal .kx-lista { list-style: none; margin: 0; padding: 0; }
+#kx-panel-modal .kx-lista li {
+  padding: 4px 0 4px 12px;
+  border-left: 2px solid transparent;
+  line-height: 1.45;
+}
+
+/* La severidad se codifica en el borde, no en el color del texto: el texto
+   tiene que seguir legible. */
+#kx-panel-modal .kx-alta  { border-left-color: var(--brand-color, #ffb000); }
+#kx-panel-modal .kx-media { border-left-color: color-mix(in srgb, var(--brand-color, #ffb000) 45%, transparent); }
+#kx-panel-modal .kx-baja  { border-left-color: var(--border, #333); opacity: 0.65; }
+#kx-panel-modal li.kx-alto { border-left-color: var(--brand-color, #ffb000); }
+
+#kx-panel-modal .kx-rama { opacity: 0.45; font-size: 0.7rem; }
+#kx-panel-modal .kx-estado { opacity: 0.75; font-size: 0.72rem; }
+#kx-panel-modal .kx-ok { opacity: 0.3; font-size: 0.72rem; }
+
+#kx-panel-modal .kx-error {
+  border-left: 2px solid var(--brand-color, #ffb000);
+  padding: 8px 12px;
+  opacity: 0.85;
+  line-height: 1.5;
+}
+
+@media (max-width: 640px) {
+  #kx-panel-modal { padding: 10px; }
+  #kx-panel-modal .kx-cifras { flex-direction: column; gap: 6px; }
+}
+
 /* ── Tipografía de la marca ─────────────────────────────────────
    Bahnschrift Condensed: una DIN industrial, angosta y de trazo
    rígido. El emblema ya aporta todo lo orgánico; una tipografía
