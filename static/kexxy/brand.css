@@ -470,6 +470,50 @@ body.theme-frosted #kx-panel-modal .kx-thumb {
   #kx-panel-modal .kx-cifras { flex-direction: column; gap: 6px; }
 }
 
+/* ── Sidebar como isla flotante ─────────────────────────────────
+   Lo que hace que la app se vea "genérica de IA" es la barra ancha pegada al
+   borde, con filas planas del mismo peso. Despegarla del borde cambia la
+   silueta sin tocar una línea de lógica: sigue siendo el mismo <nav>, con los
+   mismos items, el mismo colapso y el mismo arrastre de secciones.
+
+   El sidebar es hijo flex directo del body, así que alcanza con darle margen:
+   `align-items: stretch` descuenta los márgenes solo y la altura se ajusta.
+   No hace falta calcular nada.
+
+   Sólo desktop: en mobile el sidebar es una hoja que cubre la pantalla, y ahí
+   una isla con márgenes se ve como un error de layout.
+   ──────────────────────────────────────────────────────────────── */
+@media (min-width: 769px) {
+  .sidebar {
+    margin: 10px 0 10px 10px;
+    border-radius: 10px;
+    /* El borde derecho a tope era lo que la ataba visualmente al borde de la
+       pantalla. La isla se define por su propio contorno. */
+    border-right: 1px solid color-mix(in srgb, var(--fg) 11%, transparent);
+    box-shadow: 0 6px 22px rgba(0, 0, 0, 0.28);
+    overflow: hidden;
+  }
+
+  /* Del otro lado, el área de chat necesita el mismo aire o la isla queda
+     pegada al contenido y el efecto se pierde. */
+  .chat-container { margin-left: 10px; }
+
+  /* El rail de íconos es el sidebar cuando está colapsado: si no fuera isla
+     también, la interfaz cambiaría de forma al colapsar. */
+  .icon-rail {
+    margin: 10px 0 10px 10px;
+    border-radius: 10px;
+    border-right: 1px solid color-mix(in srgb, var(--fg) 11%, transparent);
+    box-shadow: 0 6px 22px rgba(0, 0, 0, 0.28);
+  }
+
+  /* Espejo para cuando el sidebar va a la derecha. */
+  .sidebar.right-side {
+    margin: 10px 10px 10px 0;
+    border-left: 1px solid color-mix(in srgb, var(--fg) 11%, transparent);
+  }
+}
+
 /* ── Tipografía de la marca ─────────────────────────────────────
    Bahnschrift Condensed: una DIN industrial, angosta y de trazo
    rígido. El emblema ya aporta todo lo orgánico; una tipografía
