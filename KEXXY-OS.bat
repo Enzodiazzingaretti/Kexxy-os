@@ -28,6 +28,19 @@ set "DOCKER_EXE=C:\Program Files\Docker\Docker\Docker Desktop.exe"
 set "OLLAMA_EXE=%LOCALAPPDATA%\Programs\Ollama\ollama.exe"
 set "OLLAMA_HOST=0.0.0.0:11434"
 
+REM Cuanto tiempo queda el modelo cargado en la VRAM sin usarse.
+REM El default de Ollama son 5 minutos, y medido en esta maquina el costo de
+REM volver a subir los 5.8 GB del modelo principal es de 60 a 104 segundos:
+REM el primer mensaje despues de una pausa parece que la app se colgo.
+REM 30m cubre una sesion de trabajo entera. No se usa -1 (para siempre) a
+REM proposito: dejaria 5.8 GB de los 8 tomados aunque estes jugando o usando
+REM TouchDesigner.
+set "OLLAMA_KEEP_ALIVE=30m"
+
+REM NO activar OLLAMA_FLASH_ATTENTION en esta maquina. Se probo: el modelo
+REM paso de 5.8 a 6.5 GB, dejo de entrar en los 8 de la placa y el 29% se
+REM fue a CPU. Las respuestas pasaron de 1 segundo a 70.
+
 echo.
 echo   K E X X Y   O S
 echo   ----------------------------------------------------------
@@ -38,6 +51,19 @@ curl -s -o nul --max-time 4 http://127.0.0.1:11434/api/version >nul 2>&1
 if not errorlevel 1 (
   echo   [1/4] Ollama ya estaba corriendo.
   goto docker
+)
+
+REM Zombies de llama-server. Ollama levanta un llama-server.exe por modelo, y
+REM si se mata ollama.exe a la fuerza los hijos NO mueren: quedan reteniendo
+REM VRAM. Medido: 4 huerfanos dejaron 7.7 de 8 GB tomados, el modelo se cargo
+REM 75% en CPU y las respuestas pasaron de 1 segundo a 70.
+REM Como llegamos hasta aca, Ollama no responde: cualquier llama-server vivo
+REM es huerfano por definicion.
+tasklist /FI "IMAGENAME eq llama-server.exe" 2>nul | find /I "llama-server.exe" >nul
+if not errorlevel 1 (
+  echo   [1/4] Limpiando servidores de modelo huerfanos...
+  taskkill /F /IM llama-server.exe >nul 2>&1
+  timeout /t 2 /nobreak >nul
 )
 
 if not exist "%OLLAMA_EXE%" (
