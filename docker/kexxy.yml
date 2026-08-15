@@ -14,6 +14,19 @@ services:
   odysseus:
     volumes:
       - ${KEXXY_PANEL_DIR:-../panel}:/app/kexxy-panel:ro
+      # Los proyectos, para que la IA pueda leerlos.
+      #
+      # El workspace del agente tiene que ser un directorio que exista DENTRO
+      # del contenedor: vet_workspace() valida contra el filesystem del
+      # servidor, no del host. Sin este montaje, D:\Disco D\GitHubRepos
+      # simplemente no aparece en el selector.
+      #
+      # Va en SOLO LECTURA por defecto. La IA puede leer, buscar y analizar
+      # todos los proyectos, pero no modificarlos ni borrarlos. Para permitir
+      # que escriba —agente de codigo de verdad— hay que sacarle el `:ro`, y
+      # es una decision consciente: las herramientas de archivo del agente
+      # incluyen escritura, parches y bash.
+      - ${KEXXY_REPOS_DIR:-..}:/app/repos:ro
     environment:
       - KEXXY_PANEL_CACHE=/app/kexxy-panel/cache.json
       # Habilita que la interfaz llame al panel para disparar acciones
