@@ -120,17 +120,31 @@
   position: absolute;
   left: 50%;
   /* Medido en la app: el encabezado tiene 8px de padding inferior y el texto
-     termina 8px antes del borde. El ornamento entra exacto en ese hueco: a
+     termina 8px antes del borde. El separador entra exacto en ese hueco: a
      -3px se montaba un par de píxeles sobre el primer item de la lista. */
-  bottom: 0;
-  width: 48px;
-  height: 8px;
+  bottom: 3px;
+  width: 76%;
+  height: 3px;
   transform: translateX(-50%);
   pointer-events: none;
-  opacity: 0.22;
-  background-color: var(--brand-color, var(--red, #ffb000));
-  -webkit-mask: url('/static/kexxy/ornament-h.png') center / contain no-repeat;
-          mask: url('/static/kexxy/ornament-h.png') center / contain no-repeat;
+  /* Es un separador, no un elemento de la interfaz: tiene que ordenar la
+     lectura sin competir con los items que separa. */
+  opacity: 0.34;
+
+  /* Antes acá iba el ornamento espinado del logo. A 48x8px no se leía como
+     sigilo: se veía como una mancha. Una línea afilada dice lo mismo —corte,
+     filo— y funciona a cualquier tamaño.
+
+     El degradado la hace densa en el centro y la apaga hacia los extremos;
+     el clip-path le da las puntas. Las dos cosas juntas dan una aguja, no
+     una barra. */
+  background: linear-gradient(90deg,
+    transparent 0%,
+    color-mix(in srgb, var(--brand-color, #ffb000) 55%, transparent) 22%,
+    var(--brand-color, #ffb000) 50%,
+    color-mix(in srgb, var(--brand-color, #ffb000) 55%, transparent) 78%,
+    transparent 100%);
+  clip-path: polygon(0 50%, 6% 0, 94% 0, 100% 50%, 94% 100%, 6% 100%);
 }
 
 /* Sangrado de tinta en el emblema: el trazo del logo es filoso y a
@@ -385,6 +399,11 @@
    backdrop deja de aplicar y las medidas las maneja él. */
 #kx-panel-modal .kx-caja { min-width: 380px; }
 
+/* El tip de la bienvenida está al 20% en upstream, pensado para un fondo
+   liso. Con el sigilo detrás cae justo sobre la parte densa del emblema y
+   deja de leerse. Se compensa acá porque el sigilo lo pusimos nosotros. */
+#welcome-screen .welcome-tip { opacity: 0.42; }
+
 /* ── Vidrio esmerilado ──────────────────────────────────────────
    El tema frosted de la app escribe `body.theme-frosted` y estiliza una lista
    fija de selectores donde estas vistas no estaban. Se replica el mismo
@@ -511,6 +530,18 @@ body.theme-frosted #kx-panel-modal .kx-thumb {
   .sidebar.right-side {
     margin: 10px 10px 10px 0;
     border-left: 1px solid color-mix(in srgb, var(--fg) 11%, transparent);
+  }
+
+  /* El hamburger es `fixed` y quedaba en (9,12), justo sobre la curva de la
+     esquina de la isla —que arranca en (10,10) con radio 10—, o sea mitad
+     adentro y mitad afuera. Se corre para despejar el cuadrante redondeado.
+
+     El 19 no es arbitrario: con el sidebar colapsado el rail va de x=10 a
+     x=58, así que un botón de 30px en x=19 queda centrado en el rail y
+     dentro de la isla en los dos estados. */
+  .hamburger-btn {
+    top: 19px !important;
+    left: 19px !important;
   }
 }
 
