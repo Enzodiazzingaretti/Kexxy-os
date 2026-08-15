@@ -263,6 +263,51 @@
     requestAnimationFrame(function () { markLoader((tries || 0) + 1); });
   }
 
+  /* Agrupar la lista de herramientas.
+
+     Upstream las lista alfabéticamente: Brain, Calendar, Compare, Cookbook,
+     Deep Research, Gallery, Library, Notes, Tasks. Diecisiete filas del mismo
+     peso donde "New Chat" pesa igual que "Theme", y el alfabeto no dice nada
+     sobre para qué sirve cada una.
+
+     Se reordenan por función. Es seguro: son hermanos estáticos dentro de
+     #tools-section y no hay orden persistido que pisar — el arrastre de
+     secciones que guarda `sidebar-section-order` opera sobre las secciones
+     (Chats, Email, Tools), no sobre estos items.
+
+     Idempotente: el MutationObserver reejecuta el pase, y sin la guarda esto
+     reordenaría en loop. */
+  var GRUPOS = [
+    ['Asistente', ['tool-memory-btn', 'tool-research-btn', 'tool-compare-btn', 'tool-cookbook-btn']],
+    ['Trabajo',   ['tool-notes-btn', 'tool-tasks-btn', 'tool-calendar-btn', 'tool-library-btn', 'tool-gallery-btn']],
+    ['Propio',    ['kexxy-proyectos-btn', 'kexxy-panel-btn']],
+    ['Sistema',   ['tool-theme-btn']]
+  ];
+
+  function agruparSidebar() {
+    var seccion = document.getElementById('tools-section');
+    if (!seccion || seccion.dataset.kexxyAgrupado === '1') return;
+
+    // Sin nuestros dos items todavía no tiene sentido agrupar: quedarían
+    // fuera del bloque "Propio" y habría que rehacerlo.
+    if (!document.getElementById('kexxy-panel-btn')) return;
+
+    GRUPOS.forEach(function (g) {
+      var titulo = g[0], ids = g[1];
+      var presentes = ids.map(function (id) { return document.getElementById(id); })
+                         .filter(Boolean);
+      if (!presentes.length) return;
+
+      var rotulo = document.createElement('div');
+      rotulo.className = 'kx-grupo';
+      rotulo.textContent = titulo;
+      seccion.appendChild(rotulo);
+      presentes.forEach(function (el) { seccion.appendChild(el); });
+    });
+
+    seccion.dataset.kexxyAgrupado = '1';
+  }
+
   // El sidebar no traía logo, sólo texto. Se le antepone el emblema.
   function markSidebar() {
     var brand = document.querySelector('.sidebar-brand');
@@ -772,6 +817,7 @@
     swapBoat();
     markSidebar();
     addPanelLink();
+    agruparSidebar();
     fixChatMeta();
     fixPlaceholder();
     fixTitle();

@@ -399,6 +399,45 @@
    backdrop deja de aplicar y las medidas las maneja él. */
 #kx-panel-modal .kx-caja { min-width: 380px; }
 
+/* ── Jerarquía del sidebar ──────────────────────────────────────
+   Rótulos de grupo: tienen que ordenar la lectura y desaparecer. Si un
+   rótulo compite con los items que agrupa, empeora lo que vino a arreglar.
+   ──────────────────────────────────────────────────────────────── */
+.kx-grupo {
+  font-size: 0.58rem;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  opacity: 0.32;
+  padding: 0 8px 3px;
+  margin: 11px 0 2px;
+  position: relative;
+}
+
+/* La misma línea afilada de los separadores de sección, para que el sidebar
+   hable un solo idioma. */
+.kx-grupo::after {
+  content: '';
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: 0;
+  height: 2px;
+  opacity: 0.55;
+  background: linear-gradient(90deg,
+    var(--brand-color, #ffb000) 0%,
+    color-mix(in srgb, var(--brand-color, #ffb000) 40%, transparent) 55%,
+    transparent 100%);
+  clip-path: polygon(0 0, 97% 0, 100% 50%, 97% 100%, 0 100%);
+}
+
+/* El primer grupo no necesita separarse de nada: viene pegado al encabezado
+   de la sección, que ya es un corte. */
+.kx-grupo:first-of-type { margin-top: 4px; }
+
+/* New Chat es la acción primaria y estaba con el mismo peso que Theme. */
+#sidebar-new-chat-btn { font-weight: 600; }
+#sidebar-new-chat-btn .sidebar-action-icon { color: var(--brand-color, #ffb000); opacity: 1; }
+
 /* El tip de la bienvenida está al 20% en upstream, pensado para un fondo
    liso. Con el sigilo detrás cae justo sobre la parte densa del emblema y
    deja de leerse. Se compensa acá porque el sigilo lo pusimos nosotros. */
