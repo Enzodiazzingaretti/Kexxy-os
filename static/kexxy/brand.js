@@ -282,24 +282,36 @@
      miran exactamente la misma fuente — no hay dos verdades que diverjan.
      ──────────────────────────────────────────────────────────── */
 
-  function addPanelLink() {
-    if (document.getElementById('kexxy-panel-btn')) return;
-    var theme = document.getElementById('tool-theme-btn');
-    if (!theme || !theme.parentNode) return;
+  var ICONOS = {
+    panel: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/>',
+    proyectos: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>' +
+               '<rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>'
+  };
 
-    var item = document.createElement('div');
-    item.className = 'list-item';
-    item.id = 'kexxy-panel-btn';
-    item.title = 'Proyectos, git y cobros';
-    item.innerHTML =
+  function itemSidebar(id, etiqueta, titulo, icono, onClick) {
+    if (document.getElementById(id)) return null;
+    var el = document.createElement('div');
+    el.className = 'list-item';
+    el.id = id;
+    el.title = titulo;
+    el.innerHTML =
       '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"' +
       ' stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"' +
-      ' style="flex-shrink:0;opacity:0.5;">' +
-      '<rect x="3" y="3" width="18" height="18" rx="2"/>' +
-      '<path d="M3 9h18"/><path d="M9 21V9"/>' +
-      '</svg><span class="grow">Panel</span>';
-    item.addEventListener('click', openPanel);
-    theme.parentNode.insertBefore(item, theme);
+      ' style="flex-shrink:0;opacity:0.5;">' + icono + '</svg>' +
+      '<span class="grow">' + etiqueta + '</span>';
+    el.addEventListener('click', onClick);
+    return el;
+  }
+
+  function addPanelLink() {
+    var theme = document.getElementById('tool-theme-btn');
+    if (!theme || !theme.parentNode) return;
+    var proy = itemSidebar('kexxy-proyectos-btn', 'Proyectos',
+      'Proyectos con miniatura, estado de git y accesos', ICONOS.proyectos, openProyectos);
+    if (proy) theme.parentNode.insertBefore(proy, theme);
+    var panel = itemSidebar('kexxy-panel-btn', 'Panel',
+      'Cobros, alertas y estado general', ICONOS.panel, openPanel);
+    if (panel) theme.parentNode.insertBefore(panel, theme);
   }
 
   function esc(s) {
@@ -321,6 +333,16 @@
     return '<div class="kx-sec"><h3>' + esc(titulo) + '</h3>' + cuerpo + '</div>';
   }
 
+  /* Los montos vienen crudos del panel (138457.95). Sin separadores no se
+     leen de un vistazo, que es justo para lo que sirve esta vista. Se usa
+     formato local y no una moneda fija porque el panel mezcla pesos y
+     dólares en los conceptos. */
+  var NUM = new Intl.NumberFormat('es-AR', { maximumFractionDigits: 0 });
+  function plata(n) {
+    var v = Number(n);
+    return isFinite(v) ? '$' + NUM.format(v) : esc(n);
+  }
+
   function render(d) {
     var proyectos = d.proyectos || [];
     var alertas = d.alertas || [];
@@ -336,9 +358,10 @@
     // Finanzas primero: es lo que tiene consecuencias con fecha.
     if (fin && (fin.vencidos || fin.pendientes || fin.proximos)) {
       var cifras = '<div class="kx-cifras">' +
-        '<div class="kx-cifra kx-alto"><span>Vencido</span><b>' + esc(fin.totalVencido || 0) + '</b></div>' +
-        '<div class="kx-cifra"><span>Pendiente</span><b>' + esc(fin.totalPendiente || 0) + '</b></div>' +
-        '<div class="kx-cifra"><span>Próximo</span><b>' + esc(fin.totalProximos || 0) + '</b></div>' +
+        '<div class="kx-cifra' + (fin.totalVencido ? ' kx-alto' : '') + '">' +
+          '<span>Vencido</span><b>' + plata(fin.totalVencido || 0) + '</b></div>' +
+        '<div class="kx-cifra"><span>Pendiente</span><b>' + plata(fin.totalPendiente || 0) + '</b></div>' +
+        '<div class="kx-cifra"><span>Próximo</span><b>' + plata(fin.totalProximos || 0) + '</b></div>' +
         '</div>';
       var venc = (fin.vencidos || []).map(function (i) {
         return '<li class="kx-alto">' + esc(i.concepto || i) + '</li>';
@@ -353,41 +376,120 @@
       var ord = alertas.slice().sort(function (a, b) {
         return (orden[a.severidad] ?? 3) - (orden[b.severidad] ?? 3);
       });
-      html += seccion('Alertas (' + alertas.length + ')',
+      // El desglose por severidad en el título evita tener que contar a ojo
+      // cuántas de las 25 son urgentes.
+      var cuenta = {};
+      alertas.forEach(function (a) {
+        cuenta[a.severidad || 'baja'] = (cuenta[a.severidad || 'baja'] || 0) + 1;
+      });
+      var desglose = ['alta', 'media', 'baja']
+        .filter(function (s) { return cuenta[s]; })
+        .map(function (s) { return cuenta[s] + ' ' + s; })
+        .join(' · ');
+
+      html += seccion('Alertas — ' + desglose,
         '<ul class="kx-lista">' + ord.map(function (a) {
           return '<li class="kx-' + esc(a.severidad || 'baja') + '">' + esc(a.texto || '') + '</li>';
         }).join('') + '</ul>');
     }
 
-    // Proyectos: sólo lo que no está limpio aporta información.
+    // Los proyectos tienen vista propia. Acá va sólo un resumen de una línea,
+    // para no duplicar información en dos lugares que después divergen.
     if (proyectos.length) {
-      html += seccion('Proyectos (' + proyectos.length + ')',
-        '<ul class="kx-lista kx-proy">' + proyectos.map(function (p) {
-          var g = p.git || {};
-          var estado = [];
-          if (!g.esRepo) estado.push('no es repo');
-          if (g.sucios) estado.push(g.sucios + ' sin commitear');
-          if (g.adelante) estado.push(g.adelante + ' sin subir');
-          if (g.atras) estado.push(g.atras + ' sin traer');
-          return '<li><b>' + esc(p.nombre) + '</b>' +
-            (g.rama ? ' <span class="kx-rama">' + esc(g.rama) + '</span>' : '') +
-            (estado.length ? ' <span class="kx-estado">' + esc(estado.join(' · ')) + '</span>'
-                           : ' <span class="kx-ok">limpio</span>') + '</li>';
-        }).join('') + '</ul>');
+      var sucios = proyectos.filter(function (p) {
+        var g = p.git || {};
+        return g.sucios || g.adelante || g.atras || !g.esRepo;
+      }).length;
+      html += seccion('Proyectos',
+        '<div class="kx-resumen-proy">' + proyectos.length + ' proyectos · ' +
+        (sucios ? sucios + ' necesitan atención' : 'todos limpios') +
+        ' <span class="kx-hint">— ver detalle en Proyectos</span></div>');
     }
     return html;
   }
 
-  function openPanel() {
+  /* Acciones por proyecto.
+
+     Son TODAS navegación (abrir una URL), nunca ejecución. No es una
+     limitación que se pueda levantar con más código: `connect-src 'self'`
+     bloquea llamar a la API del panel desde acá, y esa API es justamente la
+     que ejecuta comandos. Cosas como "indexar" o "git pull" siguen siendo
+     del panel o de sus .bat. */
+  var GRAPH_URL = 'http://localhost:9749';
+  var VAULT = 'boveda';
+
+  function acciones(p) {
+    var cfg = p.config || {}, git = p.git || {};
+    var lista = [];
+    if (cfg.prod) lista.push(['Producción', cfg.prod]);
+    if (git.remoto) lista.push(['GitHub', git.remoto]);
+    if (p.puertoDev) lista.push(['Dev local', 'http://localhost:' + p.puertoDev]);
+    if (cfg.ficha) {
+      lista.push(['Ficha', 'obsidian://open?vault=' + encodeURIComponent(VAULT) +
+                           '&file=' + encodeURIComponent(cfg.ficha)]);
+    }
+    // Graph NO va acá: la URL es la misma para todos los proyectos, así que
+    // repetirla en cada tarjeta es ruido y además empujaba las acciones a
+    // dos líneas, descuadrando las alturas. Va una sola vez, en la cabecera.
+    return lista.map(function (a) {
+      return '<a class="kx-accion" href="' + esc(a[1]) + '" target="_blank" rel="noopener">' +
+             esc(a[0]) + '</a>';
+    }).join('');
+  }
+
+  function renderProyectos(d) {
+    var proyectos = d.proyectos || [];
+    var maquina = d.maquina || {};
+    var html = '<div class="kx-meta">' +
+      esc(maquina.etiqueta || maquina.hostname || 'máquina') +
+      ' · ' + proyectos.length + ' proyectos · datos ' + esc(antiguedad(d.generado)) + '</div>';
+
+    html += '<div class="kx-grid">';
+    proyectos.forEach(function (p) {
+      var g = p.git || {}, f = p.ficha || {};
+      var estado = [];
+      if (!g.esRepo) estado.push('no es repo');
+      if (g.sucios) estado.push(g.sucios + ' sin commitear');
+      if (g.adelante) estado.push(g.adelante + ' sin subir');
+      if (g.atras) estado.push(g.atras + ' sin traer');
+      var sucio = estado.length > 0;
+
+      html += '<div class="kx-card' + (sucio ? ' kx-card-alerta' : '') + '">';
+      html += p.miniatura
+        ? '<div class="kx-thumb"><img loading="lazy" alt="" src="/api/kexxy/panel/thumb/' +
+          encodeURIComponent(p.miniatura) + '"></div>'
+        : '<div class="kx-thumb kx-sinthumb"><span class="kexxy-mark"></span></div>';
+
+      html += '<div class="kx-card-body">' +
+        '<div class="kx-card-tit">' + esc(p.nombre) + '</div>' +
+        (f.titulo ? '<div class="kx-card-sub">' + esc(f.titulo) + '</div>' : '') +
+        '<div class="kx-card-git">' +
+          (g.rama ? '<span class="kx-rama">' + esc(g.rama) + '</span>' : '') +
+          (sucio ? '<span class="kx-estado">' + esc(estado.join(' · ')) + '</span>'
+                 : '<span class="kx-ok">limpio</span>') +
+        '</div>' +
+        '<div class="kx-acciones">' + acciones(p) + '</div>' +
+      '</div></div>';
+    });
+    html += '</div>';
+    return html;
+  }
+
+  /* Shell común de las dos vistas. `ancho` distingue la grilla de proyectos
+     (necesita aire para las miniaturas) de la lista de finanzas. */
+  function abrirModal(titulo, dibujar, ancho, accionHead) {
     var prev = document.getElementById('kx-panel-modal');
     if (prev) prev.remove();
 
     var modal = document.createElement('div');
     modal.id = 'kx-panel-modal';
+    if (ancho) modal.classList.add('kx-ancho');
     modal.innerHTML =
-      '<div class="kx-caja" role="dialog" aria-label="Panel de proyectos y finanzas">' +
+      '<div class="kx-caja" role="dialog" aria-label="' + esc(titulo) + '">' +
       '<div class="kx-head"><span class="kexxy-mark kx-head-mark"></span>' +
-      '<h2>Panel</h2><button class="kx-cerrar" aria-label="Cerrar">&times;</button></div>' +
+      '<h2>' + esc(titulo) + '</h2>' +
+      (accionHead || '') +
+      '<button class="kx-cerrar" aria-label="Cerrar">&times;</button></div>' +
       '<div class="kx-body">Cargando…</div></div>';
     document.body.appendChild(modal);
 
@@ -409,10 +511,18 @@
         if (!r.ok) throw new Error('HTTP ' + r.status);
         return r.json();
       })
-      .then(function (d) { body.innerHTML = render(d); })
+      .then(function (d) { body.innerHTML = dibujar(d); })
       .catch(function (e) {
         body.innerHTML = '<div class="kx-error">' + esc(e.message) + '</div>';
       });
+  }
+
+  function openPanel() { abrirModal('Panel', render, false); }
+
+  function openProyectos() {
+    abrirModal('Proyectos', renderProyectos, true,
+      '<a class="kx-accion kx-head-accion" href="' + GRAPH_URL + '" target="_blank" rel="noopener"' +
+      ' title="Grafo de código (Codebase Memory). Requiere Ver-Graph.bat corriendo">Graph</a>');
   }
 
   // Cabecera del chat. El default estático de index.html es "Odysseus Chat";

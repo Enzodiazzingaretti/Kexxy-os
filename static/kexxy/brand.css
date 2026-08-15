@@ -187,6 +187,9 @@
   color: var(--brand-color, var(--red, #ffb000));
 }
 
+/* Acción global de la cabecera (Graph): va una vez, no por tarjeta. */
+#kx-panel-modal .kx-head-accion { margin-right: 10px; flex-shrink: 0; }
+
 #kx-panel-modal .kx-cerrar {
   background: none;
   border: none;
@@ -243,15 +246,99 @@
 }
 
 /* La severidad se codifica en el borde, no en el color del texto: el texto
-   tiene que seguir legible. */
-#kx-panel-modal .kx-alta  { border-left-color: var(--brand-color, #ffb000); }
-#kx-panel-modal .kx-media { border-left-color: color-mix(in srgb, var(--brand-color, #ffb000) 45%, transparent); }
-#kx-panel-modal .kx-baja  { border-left-color: var(--border, #333); opacity: 0.65; }
-#kx-panel-modal li.kx-alto { border-left-color: var(--brand-color, #ffb000); }
+   tiene que seguir legible.
+
+   Van con `li` en el selector a propósito. La regla de arriba es
+   `.kx-lista li` (0,1,1); sin el `li` acá, estas quedaban en (0,1,0) y el
+   `border-left: transparent` de la base les ganaba por especificidad — los
+   bordes salían invisibles y todas las severidades se veían iguales. */
+#kx-panel-modal .kx-lista li.kx-alta  { border-left-color: var(--brand-color, #ffb000); }
+#kx-panel-modal .kx-lista li.kx-media { border-left-color: color-mix(in srgb, var(--brand-color, #ffb000) 50%, transparent); }
+#kx-panel-modal .kx-lista li.kx-baja  { border-left-color: color-mix(in srgb, var(--fg, #ddd) 22%, transparent); opacity: 0.6; }
+#kx-panel-modal .kx-lista li.kx-alto  { border-left-color: var(--brand-color, #ffb000); }
 
 #kx-panel-modal .kx-rama { opacity: 0.45; font-size: 0.7rem; }
 #kx-panel-modal .kx-estado { opacity: 0.75; font-size: 0.72rem; }
 #kx-panel-modal .kx-ok { opacity: 0.3; font-size: 0.72rem; }
+
+#kx-panel-modal .kx-resumen-proy { opacity: 0.8; }
+#kx-panel-modal .kx-hint { opacity: 0.4; font-size: 0.7rem; }
+
+/* ── Vista de proyectos ─────────────────────────────────────────
+   Grilla de tarjetas con miniatura. La miniatura es el motivo de que esta
+   vista exista aparte: reconocer un proyecto por su captura es inmediato,
+   por su nombre no.
+   ──────────────────────────────────────────────────────────────── */
+#kx-panel-modal.kx-ancho .kx-caja { width: min(1080px, 100%); }
+
+#kx-panel-modal .kx-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 12px;
+}
+
+#kx-panel-modal .kx-card {
+  border: 1px solid var(--border, #333);
+  border-radius: 5px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background: color-mix(in srgb, var(--fg, #fff) 3%, transparent);
+}
+
+/* Sólo se destaca lo que necesita acción: si todo se resalta, nada resalta. */
+#kx-panel-modal .kx-card-alerta {
+  border-color: color-mix(in srgb, var(--brand-color, #ffb000) 45%, var(--border, #333));
+}
+
+#kx-panel-modal .kx-thumb {
+  aspect-ratio: 16 / 10;
+  background: var(--bg, #0b0d0e);
+  overflow: hidden;
+  border-bottom: 1px solid var(--border, #333);
+}
+#kx-panel-modal .kx-thumb img {
+  width: 100%; height: 100%;
+  object-fit: cover; object-position: top center;
+  display: block;
+}
+
+/* Sin captura, el emblema al 12%: mantiene la grilla pareja sin fingir
+   que hay una miniatura que no existe. */
+#kx-panel-modal .kx-sinthumb {
+  display: flex; align-items: center; justify-content: center;
+}
+#kx-panel-modal .kx-sinthumb .kexxy-mark {
+  width: 44px; height: 44px; opacity: 0.12;
+}
+
+#kx-panel-modal .kx-card-body { padding: 9px 11px 10px; display: flex; flex-direction: column; gap: 4px; }
+#kx-panel-modal .kx-card-tit { font-weight: 600; font-size: 0.78rem; }
+#kx-panel-modal .kx-card-sub {
+  opacity: 0.5; font-size: 0.68rem; line-height: 1.3;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+#kx-panel-modal .kx-card-git { display: flex; gap: 7px; flex-wrap: wrap; align-items: baseline; }
+
+#kx-panel-modal .kx-acciones {
+  display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px;
+  padding-top: 8px; border-top: 1px solid var(--border, #333);
+}
+#kx-panel-modal .kx-accion {
+  font-size: 0.66rem;
+  padding: 3px 7px;
+  border: 1px solid var(--border, #333);
+  border-radius: 3px;
+  color: var(--fg, #ddd);
+  text-decoration: none;
+  opacity: 0.75;
+  white-space: nowrap;
+}
+#kx-panel-modal .kx-accion:hover {
+  opacity: 1;
+  border-color: var(--brand-color, #ffb000);
+  color: var(--brand-color, #ffb000);
+}
 
 #kx-panel-modal .kx-error {
   border-left: 2px solid var(--brand-color, #ffb000);
