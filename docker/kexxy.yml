@@ -16,3 +16,9 @@ services:
       - ${KEXXY_PANEL_DIR:-../panel}:/app/kexxy-panel:ro
     environment:
       - KEXXY_PANEL_CACHE=/app/kexxy-panel/cache.json
+      # Habilita que la interfaz llame al panel para disparar acciones
+      # (indexar un proyecto). Ensancha connect-src en la CSP con este único
+      # origen loopback. El navegador corre en Windows, así que llega directo;
+      # el contenedor sigue sin alcanzar al panel y no le hace falta.
+      # Vaciar esta variable revierte la CSP a la de upstream.
+      - KEXXY_PANEL_ORIGIN=${KEXXY_PANEL_ORIGIN:-http://127.0.0.1:4321}

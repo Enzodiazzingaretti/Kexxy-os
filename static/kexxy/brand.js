@@ -417,24 +417,200 @@
      del panel o de sus .bat. */
   var GRAPH_URL = 'http://localhost:9749';
   var VAULT = 'boveda';
+  var PANEL_API = 'http://127.0.0.1:4321';
+  var BAT_INDEXAR = 'Indexar-Proyecto.bat';
 
-  function acciones(p) {
-    var cfg = p.config || {}, git = p.git || {};
-    var lista = [];
-    if (cfg.prod) lista.push(['Producción', cfg.prod]);
-    if (git.remoto) lista.push(['GitHub', git.remoto]);
-    if (p.puertoDev) lista.push(['Dev local', 'http://localhost:' + p.puertoDev]);
-    if (cfg.ficha) {
-      lista.push(['Ficha', 'obsidian://open?vault=' + encodeURIComponent(VAULT) +
-                           '&file=' + encodeURIComponent(cfg.ficha)]);
+  /* Indexar es la única acción que EJECUTA algo, y por eso va aparte del
+     resto (que son links). El pedido sale del navegador —que corre en
+     Windows y llega al panel— y no del contenedor, que sigue sin alcanzarlo.
+
+     Requiere dos cosas que están documentadas donde corresponde: la CSP
+     ensanchada con KEXXY_PANEL_ORIGIN (docker/kexxy.yml) y CORS en el panel
+     acotado a este origen. El panel valida del lado del servidor que el .bat
+     exista en el repo, así que desde acá no se puede pedir cualquier cosa. */
+  function postPanel(ruta, cuerpo) {
+    return fetch(PANEL_API + ruta, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(cuerpo)
+    }).then(function (r) {
+      return r.json().catch(function () { return {}; }).then(function (j) {
+        if (!r.ok) throw new Error(j.error || 'HTTP ' + r.status);
+        return j;
+      });
+    });
+  }
+
+  function ocupar(boton, texto) {
+    boton.dataset.previo = boton.dataset.previo || boton.textContent;
+    boton.textContent = texto;
+    boton.classList.add('kx-ocupado');
+    boton.disabled = true;
+  }
+
+  function resolver(boton, ok, texto, detalle) {
+    boton.classList.remove('kx-ocupado');
+    boton.disabled = false;
+    boton.classList.add(ok ? 'kx-hecho' : 'kx-fallo');
+    boton.textContent = texto;
+    if (detalle) boton.title = detalle;
+    setTimeout(function () {
+      boton.textContent = boton.dataset.previo || texto;
+      boton.classList.remove('kx-hecho', 'kx-fallo');
+    }, ok ? 2500 : 5000);
+  }
+
+  function fallar(boton, e) {
+    // Distinguir "el panel no contestó" de "el panel contestó que no". Meter
+    // todo en "panel apagado" mandaba a reiniciar el panel cuando el problema
+    // era otro, y escondía el mensaje real.
+    var red = e instanceof TypeError;
+    resolver(boton, false, red ? 'Panel apagado' : 'No se pudo',
+      red ? 'No pude hablar con el panel. Abrilo con Panel.bat y reintentá.' : e.message);
+  }
+
+  /* Levantar dev mata primero TODO dev que haya quedado vivo. Sin esto, los
+     servidores de sesiones anteriores siguen ocupando su puerto y el nuevo
+     arranca en otro sin avisar, o directamente falla. */
+  function levantarDev(nombre, boton) {
+    ocupar(boton, 'Limpiando…');
+    postPanel('/api/dev', { accion: 'detener-todos' })
+      .then(function (r) {
+        var muertos = (r.detenidos || []).length;
+        boton.textContent = muertos ? 'Arrancando… (' + muertos + ' zombie' + (muertos > 1 ? 's' : '') + ')'
+                                    : 'Arrancando…';
+        return postPanel('/api/dev', { proyecto: nombre, accion: 'arrancar' });
+      })
+      .then(function () { resolver(boton, true, 'Corriendo'); })
+      .catch(function (e) { fallar(boton, e); });
+  }
+
+  /* Las operaciones de git son trabajos asíncronos del panel: el POST sólo
+     los encola. Hay que seguir el estado hasta que deje de estar corriendo,
+     si no el botón diría "listo" con el push todavía en curso. */
+  function seguirGit(nombre, boton, verbo) {
+    var intentos = 0;
+    (function mirar() {
+      fetch(PANEL_API + '/api/git', { credentials: 'omit' })
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+          var t = (d.git || d)[nombre];
+          if (!t || t.estado === 'corriendo') {
+            if (++intentos > 90) return resolver(boton, false, 'Sin respuesta',
+              'El trabajo sigue corriendo después de 3 minutos. Miralo en el panel.');
+            return setTimeout(mirar, 2000);
+          }
+          if (t.estado === 'ok') {
+            resolver(boton, true, verbo + ' ok');
+          } else {
+            resolver(boton, false, 'Falló',
+              (t.clasificacion ? t.clasificacion + ' — ' : '') + (t.salida || '').slice(-300));
+          }
+        })
+        .catch(function (e) { fallar(boton, e); });
+    })();
+  }
+
+  function gitOperacion(nombre, operacion, mensaje, boton) {
+    ocupar(boton, operacion === 'pull' ? 'Trayendo…' : 'Subiendo…');
+    postPanel('/api/git', { proyecto: nombre, operacion: operacion, mensaje: mensaje })
+      .then(function () { seguirGit(nombre, boton, operacion === 'pull' ? 'Traído' : 'Subido'); })
+      .catch(function (e) { fallar(boton, e); });
+  }
+
+  /* Pedir el mensaje de commit inline y no con prompt(): el prompt del
+     navegador bloquea la página entera y se ve como un error del sistema. */
+  function pedirMensaje(boton, alConfirmar) {
+    var fila = boton.parentNode;
+    if (fila.querySelector('.kx-commit')) return;
+    var caja = document.createElement('div');
+    caja.className = 'kx-commit';
+    caja.innerHTML = '<input type="text" placeholder="mensaje del commit" maxlength="200">' +
+                     '<button class="kx-accion kx-ok">Subir</button>' +
+                     '<button class="kx-accion kx-cancel">Cancelar</button>';
+    fila.appendChild(caja);
+    var input = caja.querySelector('input');
+    input.focus();
+
+    function cerrar() { caja.remove(); }
+    caja.querySelector('.kx-cancel').addEventListener('click', cerrar);
+    caja.querySelector('.kx-ok').addEventListener('click', function () {
+      var m = input.value.trim();
+      if (!m) { input.focus(); return; }
+      cerrar();
+      alConfirmar(m);
+    });
+    input.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') caja.querySelector('.kx-ok').click();
+      if (e.key === 'Escape') cerrar();
+    });
+  }
+
+  function ejecutarAccion(boton) {
+    var nombre = boton.dataset.proy, accion = boton.dataset.accion;
+
+    if (accion === 'dev') return levantarDev(nombre, boton);
+    if (accion === 'pull') return gitOperacion(nombre, 'pull', null, boton);
+
+    if (accion === 'push') {
+      // Sin cambios sin commitear, el push no necesita mensaje.
+      if (Number(boton.dataset.sucios) > 0) {
+        return pedirMensaje(boton, function (m) { gitOperacion(nombre, 'push', m, boton); });
+      }
+      return gitOperacion(nombre, 'push', null, boton);
     }
-    // Graph NO va acá: la URL es la misma para todos los proyectos, así que
-    // repetirla en cada tarjeta es ruido y además empujaba las acciones a
-    // dos líneas, descuadrando las alturas. Va una sola vez, en la cabecera.
-    return lista.map(function (a) {
-      return '<a class="kx-accion" href="' + esc(a[1]) + '" target="_blank" rel="noopener">' +
-             esc(a[0]) + '</a>';
-    }).join('');
+
+    var cuerpo = accion === 'indexar'
+      ? { proyecto: nombre, accion: 'bat', bat: BAT_INDEXAR }
+      : { proyecto: nombre, accion: accion };
+    ocupar(boton, 'Abriendo…');
+    postPanel('/api/accion', cuerpo)
+      .then(function () { resolver(boton, true, 'Lanzado'); })
+      .catch(function (e) { fallar(boton, e); });
+  }
+
+  /* Producción es lo único que sigue siendo un link: es una URL de verdad.
+     El resto abre programas en la máquina, así que son botones que le piden
+     al panel que los ejecute.
+
+     Graph NO va por tarjeta: la URL es la misma para todos, repetirla 10
+     veces es ruido. Va una vez, en la cabecera. */
+  function acciones(p) {
+    var cfg = p.config || {};
+    var n = esc(p.nombre);
+    var html = '';
+    if (cfg.prod) {
+      html += '<a class="kx-accion" href="' + esc(cfg.prod) + '" target="_blank" rel="noopener">Producción</a>';
+    }
+    html += '<button class="kx-accion kx-do" data-proy="' + n + '" data-accion="vscode">VS Code</button>';
+    html += '<button class="kx-accion kx-do" data-proy="' + n + '" data-accion="carpeta">Carpeta</button>';
+    if (p.scriptDev) {
+      html += '<button class="kx-accion kx-do" data-proy="' + n + '" data-accion="dev">Dev</button>';
+    }
+    html += '<button class="kx-accion kx-do" data-proy="' + n + '" data-accion="indexar">Indexar</button>';
+    return html;
+  }
+
+  /* Fila de git: sólo aparece cuando hay algo para hacer. Un botón "Subir"
+     permanentemente visible en un repo limpio es ruido que además invita a
+     commits vacíos. */
+  function filaGit(p) {
+    var g = p.git || {};
+    if (!g.esRepo) return '';
+    var n = esc(p.nombre);
+    var html = '';
+    if (g.atras) {
+      html += '<button class="kx-accion kx-do" data-proy="' + n + '" data-accion="pull">' +
+              'Traer ' + g.atras + '</button>';
+    }
+    if (g.sucios || g.adelante) {
+      var etiqueta = g.sucios
+        ? 'Subir ' + g.sucios + (g.sucios === 1 ? ' cambio' : ' cambios')
+        : 'Subir ' + g.adelante + (g.adelante === 1 ? ' commit' : ' commits');
+      html += '<button class="kx-accion kx-do" data-proy="' + n + '" data-accion="push"' +
+              ' data-sucios="' + (g.sucios || 0) + '">' + etiqueta + '</button>';
+    }
+    return html ? '<div class="kx-git">' + html + '</div>' : '';
   }
 
   function renderProyectos(d) {
@@ -469,6 +645,7 @@
                  : '<span class="kx-ok">limpio</span>') +
         '</div>' +
         '<div class="kx-acciones">' + acciones(p) + '</div>' +
+        filaGit(p) +
       '</div></div>';
     });
     html += '</div>';
@@ -493,6 +670,28 @@
       '<div class="kx-body">Cargando…</div></div>';
     document.body.appendChild(modal);
 
+    /* Arrastre y redimensión con el MISMO sistema que el resto de las
+       ventanas de la app (windowDrag.js), y no con uno propio: así estas dos
+       heredan el anclaje a bordes, el docking y el comportamiento táctil sin
+       duplicar nada, y se siguen pareciendo al resto cuando upstream lo
+       cambie.
+
+       Va con import() dinámico porque brand.js es un script clásico y
+       windowDrag.js es un módulo ES. Si fallara, el modal sigue funcionando
+       fijo — se pierde el arrastre, no la vista. */
+    import('/static/js/windowDrag.js')
+      .then(function (m) {
+        if (m && m.makeWindowDraggable) {
+          m.makeWindowDraggable(modal, {
+            content: modal.querySelector('.kx-caja'),
+            header: modal.querySelector('.kx-head'),
+            minWidth: 380,
+            minHeight: 260
+          });
+        }
+      })
+      .catch(function () { /* sin arrastre, pero usable */ });
+
     function cerrar() {
       modal.remove();
       document.removeEventListener('keydown', onEsc);
@@ -500,7 +699,15 @@
     function onEsc(e) { if (e.key === 'Escape') cerrar(); }
     document.addEventListener('keydown', onEsc);
     modal.querySelector('.kx-cerrar').addEventListener('click', cerrar);
-    modal.addEventListener('click', function (e) { if (e.target === modal) cerrar(); });
+
+    /* Cerrar al clickear afuera, pero sólo si el gesto EMPEZÓ afuera. Sin
+       esto, arrastrar la ventana y soltar el mouse sobre el fondo cerraba el
+       panel: el click cuenta como click en el backdrop. */
+    var arrancoAfuera = false;
+    modal.addEventListener('mousedown', function (e) { arrancoAfuera = (e.target === modal); });
+    modal.addEventListener('click', function (e) {
+      if (e.target === modal && arrancoAfuera) cerrar();
+    });
 
     var body = modal.querySelector('.kx-body');
     fetch('/api/kexxy/panel', { credentials: 'same-origin' })
@@ -511,7 +718,15 @@
         if (!r.ok) throw new Error('HTTP ' + r.status);
         return r.json();
       })
-      .then(function (d) { body.innerHTML = dibujar(d); })
+      .then(function (d) {
+        body.innerHTML = dibujar(d);
+        // Delegación: las tarjetas se arman como string, así que los listeners
+        // se enganchan después de inyectar.
+        body.addEventListener('click', function (e) {
+          var b = e.target.closest ? e.target.closest('.kx-do') : null;
+          if (b && !b.classList.contains('kx-ocupado')) ejecutarAccion(b);
+        });
+      })
       .catch(function (e) {
         body.innerHTML = '<div class="kx-error">' + esc(e.message) + '</div>';
       });

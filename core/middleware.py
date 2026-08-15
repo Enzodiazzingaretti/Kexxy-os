@@ -112,6 +112,19 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             # Migrating to nonce-only requires templating the HTML files +
             # auditing every JS-set style attribute. Since inline styles
             # don't execute script, the residual risk is visual-only.
+            # KEXXY OS: origen extra permitido en connect-src, para que la
+            # interfaz pueda disparar acciones del panel local (indexar un
+            # proyecto). Es OPT-IN: si KEXXY_PANEL_ORIGIN no está definida, la
+            # política queda exactamente como la de upstream.
+            #
+            # Sólo se acepta un origen loopback. Habilitar un host remoto acá
+            # permitiría que la app hable con algo de la red, que es
+            # precisamente lo que connect-src 'self' evita.
+            extra_connect = ""
+            panel_origin = os.environ.get("KEXXY_PANEL_ORIGIN", "").strip()
+            if panel_origin.startswith(("http://127.0.0.1:", "http://localhost:")):
+                extra_connect = " " + panel_origin
+
             response.headers["Content-Security-Policy"] = (
                 "default-src 'self'; "
                 f"script-src 'self' 'nonce-{nonce}' https://cdn.jsdelivr.net; "
@@ -119,7 +132,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
                 "font-src 'self' https://cdn.jsdelivr.net; "
                 "img-src 'self' data: blob: https:; "
                 "media-src 'self' blob:; "
-                "connect-src 'self'; "
+                f"connect-src 'self'{extra_connect}; "
                 "frame-src 'self'; "
                 "frame-ancestors 'none'"
             )

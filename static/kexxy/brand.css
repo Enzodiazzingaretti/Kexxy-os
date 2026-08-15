@@ -340,6 +340,124 @@
   color: var(--brand-color, #ffb000);
 }
 
+/* Indexar es lo único que ejecuta algo, así que se distingue de los links:
+   es un <button> y arranca con el acento apagado, no con el borde neutro. */
+/* Los que EJECUTAN algo son <button> y se distinguen de los links. */
+#kx-panel-modal button.kx-accion {
+  background: none;
+  cursor: pointer;
+  font-family: inherit;
+  border-color: color-mix(in srgb, var(--brand-color, #ffb000) 35%, var(--border, #333));
+}
+#kx-panel-modal button.kx-accion.kx-ocupado { opacity: 0.5; cursor: wait; }
+#kx-panel-modal button.kx-accion.kx-hecho {
+  color: var(--brand-color, #ffb000);
+  border-color: var(--brand-color, #ffb000);
+  opacity: 1;
+}
+#kx-panel-modal button.kx-accion.kx-fallo {
+  color: color-mix(in srgb, var(--fg, #ddd) 70%, transparent);
+  border-color: color-mix(in srgb, var(--fg, #ddd) 35%, transparent);
+  opacity: 1;
+}
+
+/* Fila de git: separada de las acciones porque cambia el repo, no abre algo. */
+#kx-panel-modal .kx-git {
+  display: flex; flex-wrap: wrap; gap: 5px;
+  margin-top: 6px; padding-top: 7px;
+  border-top: 1px dashed color-mix(in srgb, var(--border, #333) 80%, transparent);
+}
+
+#kx-panel-modal .kx-commit { display: flex; gap: 4px; width: 100%; margin-top: 5px; }
+#kx-panel-modal .kx-commit input {
+  flex: 1; min-width: 0;
+  background: var(--bg, #0b0d0e);
+  border: 1px solid var(--brand-color, #ffb000);
+  border-radius: 3px;
+  color: var(--fg, #ddd);
+  font-family: inherit;
+  font-size: 0.66rem;
+  padding: 3px 6px;
+}
+#kx-panel-modal .kx-commit input:focus { outline: none; }
+
+/* Al arrastrar, windowDrag pasa la caja a posición fija: el centrado del
+   backdrop deja de aplicar y las medidas las maneja él. */
+#kx-panel-modal .kx-caja { min-width: 380px; }
+
+/* ── Vidrio esmerilado ──────────────────────────────────────────
+   El tema frosted de la app escribe `body.theme-frosted` y estiliza una lista
+   fija de selectores donde estas vistas no estaban. Se replica el mismo
+   tratamiento —mismos valores— en vez de agregarse a esa lista, que vive en
+   el style.css de upstream.
+   ──────────────────────────────────────────────────────────────── */
+body.theme-frosted #kx-panel-modal .kx-caja {
+  background-color: color-mix(in srgb, var(--panel, var(--bg)) 32%, transparent);
+  background-image: linear-gradient(180deg,
+    color-mix(in srgb, var(--fg, #fff) 14%, transparent) 0%,
+    color-mix(in srgb, var(--fg, #fff)  4%, transparent) 26%,
+    transparent 55%);
+  backdrop-filter: blur(24px) saturate(170%);
+  -webkit-backdrop-filter: blur(24px) saturate(170%);
+  border-color: color-mix(in srgb, var(--fg) 22%, transparent);
+}
+
+/* Con la caja translúcida, el velo negro del fondo la ensucia: se aclara para
+   que el blur muestre la app de atrás, que es el punto del efecto. */
+body.theme-frosted #kx-panel-modal {
+  background: color-mix(in srgb, #000 38%, transparent);
+}
+
+/* Las tarjetas y los recuadros de cifras tienen su propio fondo sólido; bajo
+   frosted quedan como parches opacos sobre el vidrio. */
+body.theme-frosted #kx-panel-modal .kx-card,
+body.theme-frosted #kx-panel-modal .kx-cifra {
+  background: color-mix(in srgb, var(--fg, #fff) 6%, transparent);
+  border-color: color-mix(in srgb, var(--fg) 18%, transparent);
+}
+body.theme-frosted #kx-panel-modal .kx-thumb {
+  background: color-mix(in srgb, var(--bg, #0b0d0e) 45%, transparent);
+}
+
+/* ── Anclado a un costado ───────────────────────────────────────
+   windowDrag agrega `modal-left-docked` / `modal-right-docked` al arrastrar
+   contra un borde, y setea left/right/width inline en la caja. Lo demás lo
+   pone el CSS — pero las reglas de upstream apuntan a `.modal` y
+   `.modal-content`, que esta vista no usa. Sin esto el arrastre al costado
+   "funciona" pero la ventana queda flotando igual, sin amoldarse.
+   ──────────────────────────────────────────────────────────────── */
+#kx-panel-modal.modal-right-docked,
+#kx-panel-modal.modal-left-docked {
+  align-items: stretch;
+  padding: 0;
+  /* El fondo oscuro deja de tener sentido: anclar la ventana sirve
+     justamente para seguir usando la app al lado. */
+  background: transparent;
+  pointer-events: none;
+}
+#kx-panel-modal.modal-right-docked { justify-content: flex-end; }
+#kx-panel-modal.modal-left-docked  { justify-content: flex-start; }
+
+#kx-panel-modal.modal-right-docked .kx-caja,
+#kx-panel-modal.modal-left-docked .kx-caja {
+  pointer-events: auto;
+  height: 100%;
+  max-height: none;
+  width: auto;
+  max-width: none;
+  border-radius: 0;
+  box-shadow: 0 0 18px rgba(0, 0, 0, 0.35);
+}
+#kx-panel-modal.modal-right-docked .kx-caja { border-left: 1px solid var(--border, #333); }
+#kx-panel-modal.modal-left-docked .kx-caja  { border-right: 1px solid var(--border, #333); }
+
+/* Anclada y angosta, la grilla de proyectos tiene que poder bajar a una
+   sola columna en vez de forzar scroll horizontal. */
+#kx-panel-modal.modal-right-docked .kx-grid,
+#kx-panel-modal.modal-left-docked .kx-grid {
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+}
+
 #kx-panel-modal .kx-error {
   border-left: 2px solid var(--brand-color, #ffb000);
   padding: 8px 12px;
